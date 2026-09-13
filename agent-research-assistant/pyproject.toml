@@ -1,0 +1,13 @@
+[project]
+name = "agent-research-assistant"
+version = "0.1.0"
+description = "A small tool-using research agent built on LangGraph's StateGraph, demonstrating explicit agent decision-making (tool selection and reasoning over results) as opposed to a fixed pipeline."
+requires-python = ">=3.10"
+dependencies = [
+    "langgraph>=1.2.0",
+    "langchain-core>=1.4.0",
+    "pytest>=8.0.0",
+]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
