@@ -1,12 +1,15 @@
 """
 StateGraph wiring for the research assistant agent.
 
-For this smoke test, the agent node uses a hardcoded decision sequence
-instead of a real LLM call. This lets us confirm the graph's loop,
-state-passing, and termination logic all work before any API key or
-model choice enters the picture.
+agent_node now calls a LLM (via Groq) to decide which tool to use
+and with what input, based on the task and the tool-call history so far.
 """
 
+import json
+import os
+
+from dotenv import load_dotenv
+from langchain_groq import ChatGroq
 from langgraph.graph import StateGraph, END
 
 from agent.state import AgentState
@@ -14,21 +17,58 @@ from tools.calculator_tool import calculator
 from tools.sql_query_tool import sql_query
 from tools.web_search_tool import web_search
 
+load_dotenv()
+
+llm = ChatGroq(
+    model="openai/gpt-oss-120b",
+    api_key=os.environ["GROQ_API_KEY"],
+    temperature=0,
+)
+
+SYSTEM_PROMPT = """You are a research assistant agent with access to three tools:
+- calculator: evaluate arithmetic expressions, e.g. "12 * (4 + 3)"
+- sql_query: run a SELECT query against a `products` table with columns (id, name, price)
+- web_search: search the web for a text query
+
+IMPORTANT: Never perform arithmetic yourself. Any time the task requires a
+calculation — even a simple one — you MUST call the calculator tool with the
+exact expression, rather than computing the result mentally.
+
+Given the task and the tool calls made so far, decide the SINGLE next action.
+Respond with ONLY a JSON object, no other text, in this exact format:
+{"next_action": "<calculator|sql_query|web_search|finish>", "next_action_input": "<input string, or final answer text if finishing>"}
+
+Choose "finish" once you have enough information to answer the task directly.
+When you finish, put your actual answer to the task in next_action_input.
+"""
+
 
 def agent_node(state: AgentState) -> dict:
-    """
-    Decide the next action. FAKE LOGIC for now — a real version will
-    replace this with an LLM call that reasons over `state["task"]` and
-    `state["tool_calls"]` so far.
-    """
     step = state["step_count"]
 
-    if step == 0:
-        next_action, next_input = "calculator", "12 * (4 + 3)"
-    elif step == 1:
-        next_action, next_input = "sql_query", "SELECT * FROM products WHERE price > 10"
-    else:
-        next_action, next_input = "finish", ""
+    if step >= state["max_steps"]:
+        return {"next_action": "finish", "next_action_input": "Max steps reached.", "step_count": step + 1}
+
+    history = "\n".join(
+        f"- {c['tool_name']}({c['tool_input']}) -> {c['tool_output']}"
+        for c in state["tool_calls"]
+    ) or "(none yet)"
+
+    user_prompt = f"Task: {state['task']}\n\nTool calls so far:\n{history}\n\nWhat's the next action?"
+
+    response = llm.invoke(
+        [
+            {"role": "system", "content": SYSTEM_PROMPT},
+            {"role": "user", "content": user_prompt},
+        ]
+    )
+
+    try:
+        decision = json.loads(response.content)
+        next_action = decision["next_action"]
+        next_input = decision["next_action_input"]
+    except (json.JSONDecodeError, KeyError):
+        next_action, next_input = "finish", f"[ERROR] Could not parse model response: {response.content}"
 
     return {
         "next_action": next_action,
@@ -38,7 +78,6 @@ def agent_node(state: AgentState) -> dict:
 
 
 def tool_executor_node(state: AgentState) -> dict:
-    """Run whichever tool the agent node selected, and record the call."""
     action = state["next_action"]
     tool_input = state["next_action_input"]
 
@@ -59,19 +98,13 @@ def tool_executor_node(state: AgentState) -> dict:
 
 
 def route_after_agent(state: AgentState) -> str:
-    """Decide whether to run a tool or finish, based on the agent's decision."""
-    if state["next_action"] == "finish" or state["step_count"] > state["max_steps"]:
+    if state["next_action"] == "finish":
         return "finish"
     return "use_tool"
 
 
 def finish_node(state: AgentState) -> dict:
-    """Compose the final answer from the tool call trace."""
-    summary = "; ".join(
-        f"{call['tool_name']}({call['tool_input']}) -> {call['tool_output']}"
-        for call in state["tool_calls"]
-    )
-    return {"final_answer": f"Done. Trace: {summary}"}
+    return {"final_answer": state["next_action_input"]}
 
 
 def build_graph():
