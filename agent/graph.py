@@ -1,8 +1,15 @@
 """
 StateGraph wiring for the research assistant agent.
 
-agent_node now calls a LLM (via Groq) to decide which tool to use
-and with what input, based on the task and the tool-call history so far.
+agent_node calls Groq's native tool-calling API — the model returns a
+structured tool_call object rather than free-text JSON we have to parse,
+removing the failure mode of the model wrapping its answer in markdown
+fences or adding stray text around the JSON.
+
+Tool call arguments are passed between nodes as a JSON string (json.dumps/
+json.loads) rather than eval() — same reasoning as the calculator tool's
+use of ast instead of raw eval(): never execute arbitrary text as code,
+even text you generated yourself.
 """
 
 import json
@@ -10,37 +17,49 @@ import os
 
 from dotenv import load_dotenv
 from langchain_groq import ChatGroq
+from langchain_core.tools import tool
 from langgraph.graph import StateGraph, END
 
 from agent.state import AgentState
-from tools.calculator_tool import calculator
-from tools.sql_query_tool import sql_query
-from tools.web_search_tool import web_search
+from tools.calculator_tool import calculator as _calculator
+from tools.sql_query_tool import sql_query as _sql_query
+from tools.web_search_tool import web_search as _web_search
 
 load_dotenv()
+
+
+@tool
+def calculator(expression: str) -> str:
+    """Evaluate an arithmetic expression, e.g. '12 * (4 + 3)'. Never do arithmetic yourself — always call this."""
+    return _calculator(expression)
+
+
+@tool
+def sql_query(query: str) -> str:
+    """Run a SELECT query against a `products` table with columns (id, name, price)."""
+    return _sql_query(query)
+
+
+@tool
+def web_search(query: str) -> str:
+    """Search the web for a text query."""
+    return _web_search(query)
+
+
+TOOLS = [calculator, sql_query, web_search]
+TOOLS_BY_NAME = {t.name: t for t in TOOLS}
 
 llm = ChatGroq(
     model="openai/gpt-oss-120b",
     api_key=os.environ["GROQ_API_KEY"],
     temperature=0,
-)
+).bind_tools(TOOLS)
 
-SYSTEM_PROMPT = """You are a research assistant agent with access to three tools:
-- calculator: evaluate arithmetic expressions, e.g. "12 * (4 + 3)"
-- sql_query: run a SELECT query against a `products` table with columns (id, name, price)
-- web_search: search the web for a text query
-
-IMPORTANT: Never perform arithmetic yourself. Any time the task requires a
-calculation — even a simple one — you MUST call the calculator tool with the
-exact expression, rather than computing the result mentally.
-
-Given the task and the tool calls made so far, decide the SINGLE next action.
-Respond with ONLY a JSON object, no other text, in this exact format:
-{"next_action": "<calculator|sql_query|web_search|finish>", "next_action_input": "<input string, or final answer text if finishing>"}
-
-Choose "finish" once you have enough information to answer the task directly.
-When you finish, put your actual answer to the task in next_action_input.
-"""
+SYSTEM_PROMPT = """You are a research assistant agent. Use the available tools
+to answer the task step by step. Never perform arithmetic yourself — always
+call the calculator tool for any calculation, even a simple one. Once you
+have enough information, respond with your final answer in plain text with
+no further tool calls."""
 
 
 def agent_node(state: AgentState) -> dict:
@@ -54,7 +73,7 @@ def agent_node(state: AgentState) -> dict:
         for c in state["tool_calls"]
     ) or "(none yet)"
 
-    user_prompt = f"Task: {state['task']}\n\nTool calls so far:\n{history}\n\nWhat's the next action?"
+    user_prompt = f"Task: {state['task']}\n\nTool calls so far:\n{history}"
 
     response = llm.invoke(
         [
@@ -63,35 +82,33 @@ def agent_node(state: AgentState) -> dict:
         ]
     )
 
-    try:
-        decision = json.loads(response.content)
-        next_action = decision["next_action"]
-        next_input = decision["next_action_input"]
-    except (json.JSONDecodeError, KeyError):
-        next_action, next_input = "finish", f"[ERROR] Could not parse model response: {response.content}"
+    if response.tool_calls:
+        call = response.tool_calls[0]  # one tool call per step, by design
+        return {
+            "next_action": call["name"],
+            "next_action_input": json.dumps(call["args"]),
+            "step_count": step + 1,
+        }
 
     return {
-        "next_action": next_action,
-        "next_action_input": next_input,
+        "next_action": "finish",
+        "next_action_input": response.content,
         "step_count": step + 1,
     }
 
 
 def tool_executor_node(state: AgentState) -> dict:
     action = state["next_action"]
-    tool_input = state["next_action_input"]
+    raw_input = state["next_action_input"]
 
-    if action == "calculator":
-        output = calculator(tool_input)
-    elif action == "sql_query":
-        output = sql_query(tool_input)
-    elif action == "web_search":
-        output = web_search(tool_input)
+    if action in TOOLS_BY_NAME:
+        args = json.loads(raw_input)
+        output = TOOLS_BY_NAME[action].invoke(args)
     else:
         output = f"[ERROR] Unknown tool: {action}"
 
     new_tool_calls = state["tool_calls"] + [
-        {"tool_name": action, "tool_input": tool_input, "tool_output": output}
+        {"tool_name": action, "tool_input": raw_input, "tool_output": output}
     ]
 
     return {"tool_calls": new_tool_calls}
