@@ -59,21 +59,50 @@ SYSTEM_PROMPT = """You are a research assistant agent. Use the available tools
 to answer the task step by step. Never perform arithmetic yourself — always
 call the calculator tool for any calculation, even a simple one. Once you
 have enough information, respond with your final answer in plain text with
-no further tool calls."""
+no further tool calls.
+
+If a tool call doesn't return useful information, do not immediately retry
+with a rephrased version of the same query. Try at most one alternative
+approach (e.g. a different tool, or a meaningfully different query), and if
+that also fails, finish and honestly tell the user the information could
+not be found rather than continuing to search."""
 
 
 def agent_node(state: AgentState) -> dict:
     step = state["step_count"]
 
     if step >= state["max_steps"]:
-        return {"next_action": "finish", "next_action_input": "Max steps reached.", "step_count": step + 1}
+        if state["tool_calls"]:
+            attempted = "; ".join(
+                f"{c['tool_name']}('{c['tool_input']}')" for c in state["tool_calls"]
+            )
+            summary = (
+                f"I wasn't able to find a clear answer after trying: {attempted}. "
+                "This information may not be available with the tools I have access to."
+            )
+        else:
+            summary = "I reached my reasoning step limit without finding an answer."
+        return {"next_action": "finish", "next_action_input": summary, "step_count": step + 1}
 
     history = "\n".join(
         f"- {c['tool_name']}({c['tool_input']}) -> {c['tool_output']}"
         for c in state["tool_calls"]
     ) or "(none yet)"
 
-    user_prompt = f"Task: {state['task']}\n\nTool calls so far:\n{history}"
+    # Detect the same tool being called 2+ times in a row with no success,
+    # and explicitly force the model to change approach — a prompt
+    # instruction alone wasn't reliably followed.
+    recent_names = [c["tool_name"] for c in state["tool_calls"][-2:]]
+    nudge = ""
+    if len(recent_names) == 2 and recent_names[0] == recent_names[1]:
+        nudge = (
+            f"\n\nYou have already called '{recent_names[0]}' twice in a row "
+            "without getting a useful answer. Do NOT call it again. Either "
+            "try a completely different tool, or finish now and honestly "
+            "tell the user the information could not be found."
+        )
+
+    user_prompt = f"Task: {state['task']}\n\nTool calls so far:\n{history}{nudge}"
 
     response = llm.invoke(
         [
@@ -83,7 +112,7 @@ def agent_node(state: AgentState) -> dict:
     )
 
     if response.tool_calls:
-        call = response.tool_calls[0]  # one tool call per step, by design
+        call = response.tool_calls[0]
         return {
             "next_action": call["name"],
             "next_action_input": json.dumps(call["args"]),
@@ -95,7 +124,6 @@ def agent_node(state: AgentState) -> dict:
         "next_action_input": response.content,
         "step_count": step + 1,
     }
-
 
 def tool_executor_node(state: AgentState) -> dict:
     action = state["next_action"]
