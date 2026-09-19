@@ -1,26 +1,45 @@
 """
-SQL query tool, backed by a small local SQLite database.
+SQL query tool, backed by a synthetic 'papers' dataset loaded from CSV.
 
-The schema/seed data here is a placeholder — swap in real sample data once
-the graph loop is confirmed working. Kept as a real (not hardcoded-string)
-SQLite call so the tool-selection tests exercise actual query execution.
+Data is entirely synthetic (fabricated titles/authors/citation counts)
+for portfolio-safety reasons — no real paper metadata or scraped data
+is used. Loaded fresh into an in-memory SQLite database on each call,
+same pattern as before, just sourced from a real file instead of
+hardcoded Python tuples, so data and code are properly separated.
 """
 
+import csv
 import sqlite3
+from pathlib import Path
+
+_CSV_PATH = Path(__file__).parent.parent / "data" / "papers.csv"
 
 
 def _get_seeded_connection() -> sqlite3.Connection:
     conn = sqlite3.connect(":memory:")
     conn.execute(
-        "CREATE TABLE products (id INTEGER PRIMARY KEY, name TEXT, price REAL)"
+        """
+        CREATE TABLE papers (
+            id INTEGER PRIMARY KEY,
+            title TEXT,
+            authors TEXT,
+            year INTEGER,
+            topic TEXT,
+            citation_count INTEGER
+        )
+        """
     )
+
+    with open(_CSV_PATH, newline="", encoding="utf-8") as f:
+        reader = csv.DictReader(f)
+        rows = [
+            (row["title"], row["authors"], int(row["year"]), row["topic"], int(row["citation_count"]))
+            for row in reader
+        ]
+
     conn.executemany(
-        "INSERT INTO products (name, price) VALUES (?, ?)",
-        [
-            ("Widget A", 9.99),
-            ("Widget B", 14.50),
-            ("Widget C", 22.00),
-        ],
+        "INSERT INTO papers (title, authors, year, topic, citation_count) VALUES (?, ?, ?, ?, ?)",
+        rows,
     )
     conn.commit()
     return conn
@@ -28,7 +47,7 @@ def _get_seeded_connection() -> sqlite3.Connection:
 
 def sql_query(query: str) -> str:
     """
-    Run a read-only SQL query against the seeded sample database.
+    Run a read-only SQL query against the synthetic papers database.
 
     Args:
         query: A SQL SELECT statement.

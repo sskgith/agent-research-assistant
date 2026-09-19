@@ -1,0 +1,43 @@
+title,authors,year,topic,citation_count
+Attention Is All You Need Revisited,Chen L.; Okafor M.,2023,LLM Agents,412
+Tool-Augmented Reasoning in Large Language Models,Patel R.; Singh A.,2024,LLM Agents,289
+ReAct: Synergizing Reasoning and Acting,Yao S.; Zhao J.,2022,LLM Agents,876
+Autonomous Agent Orchestration with Graph-Based Planning,Kumar V.; Lee H.,2025,LLM Agents,134
+Multi-Agent Collaboration via Shared Memory,Wong T.; Diallo F.,2024,LLM Agents,201
+Grounding LLM Agents with External Tool Use,Nakamura K.; Silva P.,2023,LLM Agents,367
+Evaluating Agentic Workflows in Production Systems,Rossi G.; Kim D.,2026,LLM Agents,58
+Self-Correcting Agents via Reflection,Ahmed Z.; Novak I.,2024,LLM Agents,223
+Scaling Tool-Use Fine-Tuning for Agents,Martinez C.; Fischer B.,2025,LLM Agents,97
+Hierarchical Planning for Long-Horizon Agent Tasks,Ivanova E.; Osei K.,2025,LLM Agents,145
+Proximal Policy Optimization Algorithms,Schulman J.; Wolski F.,2017,Reinforcement Learning,1204
+Soft Actor-Critic for Continuous Control,Haarnoja T.; Zhou A.,2018,Reinforcement Learning,987
+Domain Randomization for Sim-to-Real Transfer,Tobin J.; Fong R.,2019,Reinforcement Learning,654
+Deep RL for Robotic Manipulation: A Survey,Gupta A.; Levine S.,2021,Reinforcement Learning,543
+Sample-Efficient RL with Model-Based Planning,Hafner D.; Lillicrap T.,2020,Reinforcement Learning,412
+Multi-Task Reinforcement Learning with Shared Representations,Teh Y.; Bapst V.,2022,Reinforcement Learning,298
+Curriculum Learning for Sparse-Reward Environments,Narvekar S.; Sinapov J.,2023,Reinforcement Learning,176
+Offline RL from Logged Demonstrations,Fujimoto S.; Meger D.,2021,Reinforcement Learning,389
+Reward Shaping in Multi-Agent RL Systems,Devlin S.; Kudenko D.,2020,Reinforcement Learning,231
+Safe Exploration in Deep Reinforcement Learning,Garcia J.; Fernandez F.,2022,Reinforcement Learning,167
+Deep Residual Learning for Image Recognition,He K.; Zhang X.,2016,Computer Vision,2103
+YOLOv9: Real-Time Object Detection Revisited,Wang C.; Bochkovskiy A.,2024,Computer Vision,321
+Vision Transformers for Dense Prediction,Ranftl R.; Bochkovskiy A.,2021,Computer Vision,876
+Self-Supervised Learning for Visual Representations,Chen T.; Kornblith S.,2020,Computer Vision,1543
+Diffusion Models for Image Synthesis,Ho J.; Jain A.,2020,Computer Vision,1876
+Facial Landmark Detection with Lightweight Networks,Bulat A.; Tzimiropoulos G.,2019,Computer Vision,432
+Real-Time Semantic Segmentation for Autonomous Driving,Paszke A.; Chaurasia A.,2018,Computer Vision,567
+Few-Shot Object Detection via Meta-Learning,Wang Y.; Ramanan D.,2021,Computer Vision,298
+Depth Estimation from Monocular Images,Godard C.; Aodha O.,2019,Computer Vision,456
+Multimodal Vision-Language Pretraining,Radford A.; Kim J.,2021,Computer Vision,2987
+BERT: Pre-training of Deep Bidirectional Transformers,Devlin J.; Chang M.,2019,Natural Language Processing,3210
+Retrieval-Augmented Generation for Knowledge-Intensive NLP,Lewis P.; Perez E.,2020,Natural Language Processing,1432
+Chain-of-Thought Prompting Elicits Reasoning,Wei J.; Wang X.,2022,Natural Language Processing,1876
+Instruction Tuning for Language Models,Wang Y.; Kordi Y.,2023,Natural Language Processing,987
+Low-Rank Adaptation of Large Language Models,Hu E.; Shen Y.,2021,Natural Language Processing,1654
+Evaluating Factuality in Long-Form Text Generation,Min S.; Krishna K.,2023,Natural Language Processing,234
+Efficient Fine-Tuning via Parameter-Efficient Methods,Liu H.; Tam D.,2022,Natural Language Processing,543
+Cross-Lingual Transfer for Low-Resource Languages,Conneau A.; Lample G.,2020,Natural Language Processing,678
+Summarization with Controllable Length and Style,Fan A.; Grangier D.,2021,Natural Language Processing,187
+Synthetic Data Generation for LLM Fine-Tuning,Jordan M.; Achterberg T.,2025,Natural Language Processing,76
+ROS2-Based Multi-Robot Coordination Framework,Alonso-Mora J.; Baxter P.,2021,Robotics,321
+Sim-to-Real Transfer for Robotic Grasping,Zhu Y.; Fazeli N.,2022,Robotics,278

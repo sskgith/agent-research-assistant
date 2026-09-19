@@ -36,7 +36,7 @@ def calculator(expression: str) -> str:
 
 @tool
 def sql_query(query: str) -> str:
-    """Run a SELECT query against a `products` table with columns (id, name, price)."""
+    """Run a SELECT query against a `papers` table with columns (id, title, authors, year, topic, citation_count)."""
     return _sql_query(query)
 
 
