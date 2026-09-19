@@ -27,14 +27,13 @@ def test_calculator_unsupported_operator_returns_error():
 
 
 def test_sql_query_returns_matching_rows():
-    result = sql_query("SELECT name FROM products WHERE price > 10")
-    assert "Widget B" in result
-    assert "Widget C" in result
-    assert "Widget A" not in result
+    result = sql_query("SELECT title FROM papers WHERE topic = 'Computer Vision'")
+    assert "Deep Residual Learning for Image Recognition" in result
+    assert "BERT: Pre-training of Deep Bidirectional Transformers" not in result
 
 
 def test_sql_query_rejects_non_select_statements():
-    result = sql_query("DROP TABLE products")
+    result = sql_query("DROP TABLE papers")
     assert result.startswith("[ERROR]")
 
 

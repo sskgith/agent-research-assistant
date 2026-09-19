@@ -39,11 +39,10 @@ def test_tool_executor_dispatches_to_calculator():
 def test_tool_executor_dispatches_to_sql_query():
     state = initial_state("dummy task")
     state["next_action"] = "sql_query"
-    state["next_action_input"] = '{"query": "SELECT name FROM products WHERE price > 10"}'
+    state["next_action_input"] = '{"query": "SELECT title FROM papers WHERE topic = \'Robotics\'"}'
     result = tool_executor_node(state)
     assert result["tool_calls"][0]["tool_name"] == "sql_query"
-    assert "Widget B" in result["tool_calls"][0]["tool_output"]
-
+    assert "ROS2-Based Multi-Robot Coordination Framework" in result["tool_calls"][0]["tool_output"]
 
 def test_tool_executor_dispatches_to_web_search():
     state = initial_state("dummy task")
