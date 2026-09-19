@@ -48,10 +48,10 @@ def test_tool_executor_dispatches_to_sql_query():
 def test_tool_executor_dispatches_to_web_search():
     state = initial_state("dummy task")
     state["next_action"] = "web_search"
-    state["next_action_input"] = '{"query": "test query"}'
+    state["next_action_input"] = '{"query": "LangGraph agent framework"}'
     result = tool_executor_node(state)
     assert result["tool_calls"][0]["tool_name"] == "web_search"
-    assert "test query" in result["tool_calls"][0]["tool_output"]
+    assert not result["tool_calls"][0]["tool_output"].startswith("[ERROR]")
 
 
 def test_tool_executor_handles_unknown_tool():

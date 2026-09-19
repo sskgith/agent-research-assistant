@@ -38,6 +38,7 @@ def test_sql_query_rejects_non_select_statements():
     assert result.startswith("[ERROR]")
 
 
-def test_web_search_returns_string_containing_query():
-    result = web_search("test query")
-    assert "test query" in result
+def test_web_search_returns_results_for_a_real_query():
+    result = web_search("LangGraph agent framework")
+    assert not result.startswith("[ERROR]")
+    assert len(result) > 0
